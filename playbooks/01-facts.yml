@@ -1,0 +1,11 @@
+---
+   - name: Gather and display router facts
+     hosts: routers
+     gather_facts: false
+     tasks:
+       - name: Collect IOS facts
+         cisco.ios.ios_facts:
+
+       - name: Show model and version
+         ansible.builtin.debug:
+           msg: "{{ inventory_hostname }} is a {{ ansible_net_model }} running {{ ansible_net_version }}"
