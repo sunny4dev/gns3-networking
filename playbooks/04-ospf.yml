@@ -1,0 +1,4 @@
+- name: Push OSPF from template
+  cisco.ios.ios_config:
+    src: ospf.j2
+    save_when: modified
