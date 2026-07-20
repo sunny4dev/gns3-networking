@@ -1,0 +1,16 @@
+- name: Verify network state
+  hosts: routers
+  gather_facts: false
+  tasks:
+    - name: Collect IOS facts
+      cisco.ios.ios_facts:
+
+    - name: Version summary
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}:
+              IOS {{ ansible_net_version }}"
+
+    - name: Interface table
+      cisco.ios.ios_command:
+        commands: show ip interface brief
+      register: intf_out
