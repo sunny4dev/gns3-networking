@@ -20,20 +20,22 @@ to network devices.
 ├── group_vars/
 │   └── routers.yml              # connection vars (network_cli, credentials)
 ├── host_vars/                   # per-router variables (OSPF, etc.)
-│   ├── R1.yml
-│   ├── R2.yml
-│   └── R3.yml
+│   └── R1.yml                   # R2.yml / R3.yml added as a trainee exercise
 ├── templates/
 │   └── ospf.j2                  # Jinja2 template for OSPF config
-└── playbooks/
-    ├── 01-facts.yml             # gather & display device facts
-    ├── 02-verify.yml            # show commands / verification
-    ├── 03-loopbacks.yml         # push config + idempotency demo
-    ├── 04-ospf.yml              # deploy OSPF from a template
-    └── 05-backup.yml            # back up running configs
+├── playbooks/
+│   ├── 01-facts.yml             # gather & display device facts
+│   ├── 02-verify.yml            # show commands / verification
+│   ├── 03-loopbacks.yml         # push config + idempotency demo
+│   ├── 04-ospf.yml              # deploy OSPF from a template
+│   └── 05-backup.yml            # back up running configs
+├── initial-config-R1            # router baseline configs (mgmt IP + SSH)
+├── initial-config-R2
+├── initial-config-R3
+└── docs/
+    ├── eth0-static.png          # control-node eth0 static config screenshot
+    └── eth1-dhcp.png            # control-node eth1 DHCP config screenshot
 ```
-
-> Adjust the file list above to match what you actually commit.
 
 ---
 
@@ -114,7 +116,10 @@ write memory
 ### 3. Prepare the control node (one-time)
 
 Give the NetworkAutomation node its IP by editing its network config
-(right-click → **Edit config**, or `/etc/network/interfaces`):
+(right-click → **Edit config**, or `/etc/network/interfaces`). Uncomment the static block
+for `eth0` and set the lab address:
+
+![eth0 static configuration](docs/eth0-static.png)
 
 ```
 auto eth0
@@ -123,11 +128,22 @@ iface eth0 inet static
     netmask 255.255.255.0
 ```
 
-To install/upgrade tools, temporarily add a second adapter cabled to a NAT node for internet:
+To install/upgrade tools, temporarily add a **second adapter** (Adapters: 2 in the node
+settings) cabled to a **NAT node** for internet access, and add a DHCP block for `eth1`:
+
+![eth1 DHCP configuration for temporary internet access](docs/eth1-dhcp.png)
+
+```
+# DHCP config for eth1 (NAT node - temporary)
+auto eth1
+iface eth1 inet dhcp
+```
+
+Then, from the container console (with the NAT link attached):
 
 ```bash
-# with the NAT link attached:
 pip3 install --upgrade ansible
+pip3 install ansible-pylibssh          # faster SSH backend (avoids the paramiko fallback warning)
 apt-get update && apt-get install -y vim
 ```
 
@@ -233,6 +249,10 @@ ansible-playbook playbooks/05-backup.yml
 
 Useful flags: `--limit R1` (one host), `--check --diff` (dry run), `-vvv` (verbose).
 
+> **Note:** `host_vars/` ships with only `R1.yml`. Adding `host_vars/R2.yml` and
+> `host_vars/R3.yml` (each with that router's `router_id` and `ospf_networks`) is left as a
+> trainee exercise — `04-ospf.yml` only fully configures R1 until they are added.
+
 ---
 
 ## Troubleshooting
@@ -244,6 +264,7 @@ Useful flags: `--limit R1` (one host), `--check --diff` (dry run), `-vvv` (verbo
 | `Invalid input detected` on config tasks | Missing `ansible_become: true` — config mode needs enable. |
 | SSH key-exchange / no matching cipher | Old IOS crypto. Add legacy algorithms to `~/.ssh/config` on the control node (`KexAlgorithms +diffie-hellman-group14-sha1`, `HostKeyAlgorithms +ssh-rsa`, `PubkeyAcceptedAlgorithms +ssh-rsa`). |
 | `ping` module fails on routers | Expected — the `ping` module needs Python on the target. Use `ios_facts` or `cli_command` to test reachability instead. |
+| `ansible-pylibssh not installed, falling back to paramiko` | Harmless — paramiko works fine. To silence it and speed up SSH: `pip3 install ansible-pylibssh`. |
 | Docker node won't start (Windows) | GNS3 VM not running — Docker nodes run inside it on Windows. |
 
 ---
