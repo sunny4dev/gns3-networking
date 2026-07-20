@@ -1,0 +1,10 @@
+- name: Baseline configuration
+  hosts: routers
+  gather_facts: false
+  tasks:
+    - name: Loopback0
+      cisco.ios.ios_config:
+        parents: interface Loopback0
+        lines:
+          - description Managed by Ansible
+          - ip address 192.168.100.11 255.255.255.255
